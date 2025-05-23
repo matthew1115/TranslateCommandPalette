@@ -7,15 +7,17 @@ using Microsoft.CommandPalette.Extensions.Toolkit;
 using Microsoft.UI.Xaml.Controls;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using TranslateCommandPalette.Helpers;
 
 namespace TranslateCommandPalette;
 
-internal sealed partial class TranslateCommandPalettePage : DynamicListPage
+internal sealed partial class TranslateCommandPalettePage : DynamicListPage, IDisposable
 {
     private readonly List<IListItem> _results = [];
     private readonly ListItem _EmptyItem;
-    private readonly Translate translator = new Translate();
+    private readonly Translate translator = new();
+    private CancellationTokenSource _cts = new();
 
     public TranslateCommandPalettePage()
     {
@@ -30,11 +32,13 @@ internal sealed partial class TranslateCommandPalettePage : DynamicListPage
 
     public override void UpdateSearchText(string oldSearch, string newSearch)
     {
-        IsLoading = true;
         if (oldSearch == newSearch)
         {
             return;
         }
+        IsLoading = true;
+        _cts.Cancel();
+        _cts = new();
         _results.Clear();
         if (string.IsNullOrEmpty(newSearch))
         {
@@ -42,11 +46,17 @@ internal sealed partial class TranslateCommandPalettePage : DynamicListPage
         }
         else
         {
-            var mandarin = translator.GetMandarinTranslation(newSearch).Result;
+            var mandarin = translator.GetMandarinTranslation(newSearch, _cts.Token).Result;
             _results.Add(new ListItem(new OpenUrl($"https://dict.youdao.com/result?word={newSearch}&lang=en")) { Title = mandarin });
         }
-        RaiseItemsChanged();
+        RaiseItemsChanged(0);
         IsLoading = false;
     }
     public override IListItem[] GetItems() => _results.ToArray();
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        GC.SuppressFinalize(this);
+    }
 }

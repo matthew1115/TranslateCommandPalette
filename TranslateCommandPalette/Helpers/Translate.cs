@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 /// <summary>
@@ -28,6 +29,7 @@ namespace TranslateCommandPalette.Helpers
         /// Retrieves the Mandarin translation for an English word from Wiktionary.
         /// </summary>
         /// <param name="word">The English word to translate.</param>
+        /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
         /// <returns>
         /// A task that represents the asynchronous operation. The task result contains:
         /// - The Mandarin translation if found.
@@ -42,21 +44,22 @@ namespace TranslateCommandPalette.Helpers
         /// Console.WriteLine(translation); // Outputs the Mandarin translation for "hello"
         /// </code>
         /// </example>
-        public async Task<string> GetMandarinTranslation(string word)
+        public async Task<string> GetMandarinTranslation(string word, CancellationToken cancellationToken = default)
         {
             string url = $"https://en.wiktionary.org/w/api.php?action=query&prop=revisions&titles={word}&rvprop=content&format=json";
 
             try
             {
-                HttpResponseMessage response = await _httpClient.GetAsync(url);
+                // Pass the cancellation token to GetAsync
+                HttpResponseMessage response = await _httpClient.GetAsync(url, cancellationToken);
                 response.EnsureSuccessStatusCode();
 
-                string jsonContent = await response.Content.ReadAsStringAsync();
+                // Pass the cancellation token to ReadAsStringAsync
+                string jsonContent = await response.Content.ReadAsStringAsync(cancellationToken);
                 using JsonDocument document = JsonDocument.Parse(jsonContent);
 
                 // Navigate through the JSON structure
                 var pages = document.RootElement.GetProperty("query").GetProperty("pages");
-                // Replace the problematic line with the following code:
                 var pageId = pages.EnumerateObject().First().Name;
                 var wikitext = pages.GetProperty(pageId)
                                     .GetProperty("revisions")[0]
@@ -78,6 +81,11 @@ namespace TranslateCommandPalette.Helpers
                 // Extract the Mandarin word
                 string mandarinWord = mandarinMatch.Groups[1].Value;
                 return $"{mandarinWord}";
+            }
+            catch (OperationCanceledException)
+            {
+                // Handle cancellation specifically
+                return "Translation cancelled";
             }
             catch (HttpRequestException e)
             {
