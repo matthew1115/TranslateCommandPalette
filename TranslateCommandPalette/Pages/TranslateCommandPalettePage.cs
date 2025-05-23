@@ -32,6 +32,8 @@ internal sealed partial class TranslateCommandPalettePage : DynamicListPage, IDi
 
     public override void UpdateSearchText(string oldSearch, string newSearch)
     {
+        bool updateFlag = false;
+
         if (oldSearch == newSearch)
         {
             return;
@@ -47,9 +49,14 @@ internal sealed partial class TranslateCommandPalettePage : DynamicListPage, IDi
         else
         {
             var mandarin = translator.GetMandarinTranslation(newSearch, _cts.Token).Result;
-            _results.Add(new ListItem(new OpenUrl($"https://dict.youdao.com/result?word={newSearch}&lang=en")) { Title = mandarin });
+            if (mandarin != "@Canceled")
+            {
+                updateFlag = true;
+                _results.Add(new ListItem(new OpenUrl($"https://dict.youdao.com/result?word={newSearch}&lang=en")) { Title = mandarin });
+            }
         }
-        RaiseItemsChanged(0);
+        if (updateFlag)
+            RaiseItemsChanged(0);
         IsLoading = false;
     }
     public override IListItem[] GetItems() => _results.ToArray();

@@ -82,22 +82,13 @@ namespace TranslateCommandPalette.Helpers
                 string mandarinWord = mandarinMatch.Groups[1].Value;
                 return $"{mandarinWord}";
             }
-            catch (OperationCanceledException)
+            catch (TaskCanceledException)
             {
-                // Handle cancellation specifically
-                return "Translation cancelled";
-            }
-            catch (HttpRequestException e)
-            {
-                return $"Request failed: {e.Message}";
-            }
-            catch (JsonException e)
-            {
-                return $"Parsing error: {e.Message}";
+                return "@Canceled";
             }
             catch (Exception e)
             {
-                return $"Error: {e.Message}";
+                return e.Message;
             }
         }
     }
