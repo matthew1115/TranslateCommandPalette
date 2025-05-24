@@ -56,8 +56,10 @@ internal sealed partial class TranslateCommandPalettePage : DynamicListPage, IDi
             }
         }
         if (updateFlag)
+        {
             RaiseItemsChanged(0);
-        IsLoading = false;
+            IsLoading = false;
+        }
     }
     public override IListItem[] GetItems() => _results.ToArray();
 
