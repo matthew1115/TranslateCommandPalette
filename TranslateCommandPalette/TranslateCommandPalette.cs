@@ -9,7 +9,6 @@ using Microsoft.CommandPalette.Extensions;
 
 namespace TranslateCommandPalette;
 
-[ComVisible(true)]
 [Guid("eeec51db-a156-416a-9bdf-cedfc7fcfdf3")]
 public sealed partial class TranslateCommandPalette : IExtension, IDisposable
 {
