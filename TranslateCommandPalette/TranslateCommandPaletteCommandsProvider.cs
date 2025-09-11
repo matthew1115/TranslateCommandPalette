@@ -13,10 +13,10 @@ public partial class TranslateCommandPaletteCommandsProvider : CommandProvider
 
     public TranslateCommandPaletteCommandsProvider()
     {
-        DisplayName = "Translate";
         Icon = IconHelpers.FromRelativePath("Assets\\StoreLogo.png");
         _commands = [
-            new CommandItem(new TranslateCommandPalettePage()) { Title = DisplayName },
+            new CommandItem(new TranslateCommandPaletteTranslatePage()) { Title = "Translate" },
+            new CommandItem(new TranslateCommandPaletteDictionaryPage()) { Title = "Dictionary" }
         ];
     }
 

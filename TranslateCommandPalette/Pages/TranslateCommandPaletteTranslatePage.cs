@@ -12,22 +12,19 @@ using TranslateCommandPalette.Helpers;
 
 namespace TranslateCommandPalette;
 
-internal sealed partial class TranslateCommandPalettePage : DynamicListPage, IDisposable
+internal sealed partial class TranslateCommandPaletteTranslatePage : DynamicListPage, IDisposable
 {
     private readonly List<IListItem> _results = [];
     private readonly ListItem _EmptyItem;
     private readonly Translate translator = new();
     private CancellationTokenSource _cts = new();
 
-    public TranslateCommandPalettePage()
+    public TranslateCommandPaletteTranslatePage()
     {
         Icon = IconHelpers.FromRelativePath("Assets\\StoreLogo.png");
         Title = "Translate";
+        PlaceholderText = "Enter text to translate to Chinese";
         Name = "Open";
-        _EmptyItem = new ListItem(new NoOpCommand())
-        {
-            Title = "Input to translate to Chinese",
-        };
     }
 
     public override void UpdateSearchText(string oldSearch, string newSearch)
