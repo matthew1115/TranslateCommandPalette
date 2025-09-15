@@ -6,6 +6,8 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
+using CTranslate2Wrapper;
+
 /// <summary>
 /// Provides functionality for translating English words to Mandarin Chinese.
 /// Uses Wiktionary's API to retrieve translations.
@@ -14,15 +16,13 @@ namespace TranslateCommandPalette.Helpers
 {
     public class Translate
     {
-        private readonly HttpClient _httpClient;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="Translate"/> class.
         /// Creates an HttpClient instance that will be used for API requests.
         /// </summary>
         public Translate()
         {
-            _httpClient = new HttpClient();
+            
         }
 
         /// <summary>
@@ -46,50 +46,7 @@ namespace TranslateCommandPalette.Helpers
         /// </example>
         public async Task<string> GetMandarinTranslation(string word, CancellationToken cancellationToken = default)
         {
-            string url = $"https://en.wiktionary.org/w/api.php?action=query&prop=revisions&titles={word}&rvprop=content&format=json";
-
-            try
-            {
-                // Pass the cancellation token to GetAsync
-                HttpResponseMessage response = await _httpClient.GetAsync(url, cancellationToken);
-                response.EnsureSuccessStatusCode();
-
-                // Pass the cancellation token to ReadAsStringAsync
-                string jsonContent = await response.Content.ReadAsStringAsync(cancellationToken);
-                using JsonDocument document = JsonDocument.Parse(jsonContent);
-
-                // Navigate through the JSON structure
-                var pages = document.RootElement.GetProperty("query").GetProperty("pages");
-                var pageId = pages.EnumerateObject().First().Name;
-                var wikitext = pages.GetProperty(pageId)
-                                    .GetProperty("revisions")[0]
-                                    .GetProperty("*")
-                                    .GetString();
-
-                if (wikitext == null)
-                    return $"No content found for '{word}'.";
-
-                // Find the Mandarin line using regex
-                var mandarinMatch = Regex.Match(
-                    wikitext,
-                    @"\*: Mandarin: \{\{.*?\|.*?\|([^}|]+)"
-                );
-
-                if (!mandarinMatch.Success)
-                    return $"No Mandarin translation found for '{word}'.";
-
-                // Extract the Mandarin word
-                string mandarinWord = mandarinMatch.Groups[1].Value;
-                return $"{mandarinWord}";
-            }
-            catch (TaskCanceledException)
-            {
-                return "@Canceled";
-            }
-            catch (Exception e)
-            {
-                return e.Message;
-            }
+            
         }
     }
 }

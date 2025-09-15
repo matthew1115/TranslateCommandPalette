@@ -45,6 +45,9 @@
     <PackageReference Include="System.Text.Json" />
     <PackageReference Include="Shmuelie.WinRTServer" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CTranslate2Wrapper\CTranslate2Wrapper.vcxproj" />
+  </ItemGroup>
 
   <!--
     Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
