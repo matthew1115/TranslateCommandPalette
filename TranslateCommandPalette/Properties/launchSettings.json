@@ -2,7 +2,10 @@
   "profiles": {
     "TranslateCommandPalette (Package)": {
       "commandName": "MsixPackage",
-      "doNotLaunchApp": true
+      "doNotLaunchApp": true,
+      "alwaysReinstallApp": false,
+      "hotReloadEnabled": false,
+      "nativeDebugging": true
     },
     "TranslateCommandPalette (Unpackaged)": {
       "commandName": "Project"

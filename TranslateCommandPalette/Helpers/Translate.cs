@@ -1,10 +1,12 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 using CTranslate2Wrapper;
 
@@ -24,30 +26,84 @@ namespace TranslateCommandPalette.Helpers
         /// </summary>
         public Translate(string mulEnPath, string EnZhPath)
         {
-            mulEnTranslator = new(mulEnPath);
-            EnTargetTranslator = new(EnZhPath);
+            // Minimal validation for common issues
+            //if (!Directory.Exists(mulEnPath))
+            //    throw new DirectoryNotFoundException($"Model directory not found: {mulEnPath}");
+            //if (!Directory.Exists(EnZhPath))
+            //    throw new DirectoryNotFoundException($"Model directory not found: {EnZhPath}");
+
+            // Check for required files that CTranslate2 typically needs
+            var requiredFiles = new[] { "model.bin", "config.json", "vocabulary.txt", "shared_vocabulary.txt" };
+            foreach (var dir in new[] { (mulEnPath, "mulEn"), (EnZhPath, "enZh") })
+            {
+                var missingFiles = requiredFiles.Where(file => !File.Exists(Path.Combine(dir.Item1, file))).ToList();
+                if (missingFiles.Any())
+                {
+                    Debug.WriteLine($"Warning: {dir.Item2} model missing files: {string.Join(", ", missingFiles)}");
+                }
+            }
+
+            // Normalize paths for C++ (replace backslashes with forward slashes)
+            var normMulEnPath = mulEnPath.Replace('\\', '/');
+            var normEnZhPath = EnZhPath.Replace('\\', '/');
+
+            Debug.WriteLine($"Attempting to load models from:");
+            Debug.WriteLine($"  MulEn: {normMulEnPath}");
+            Debug.WriteLine($"  EnZh: {normEnZhPath}");
+
+            try
+            {
+                Debug.WriteLine("Loading MulEn translator...");
+                mulEnTranslator = new(normMulEnPath);
+                Debug.WriteLine("MulEn translator loaded successfully");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to load MulEn translator: {ex.Message}");
+                throw new InvalidOperationException($"Failed to load MulEn model from '{normMulEnPath}': {ex.Message}", ex);
+            }
+
+            try
+            {
+                Debug.WriteLine("Loading EnZh translator...");
+                EnTargetTranslator = new(normEnZhPath);
+                Debug.WriteLine("EnZh translator loaded successfully");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to load EnZh translator: {ex.Message}");
+                mulEnTranslator?.Dispose(); // Clean up the first translator if second fails
+                throw new InvalidOperationException($"Failed to load EnZh model from '{normEnZhPath}': {ex.Message}", ex);
+            }
         }
 
         // TODO: Add language detection and support multilang
         public async Task<string> GetTargetTranslation(string text, CancellationToken cancellationToken = default)
         {
-            return await Task.Run(() =>
+            try
             {
-                var options = new TranslationOptions
+                return await Task.Run(() =>
                 {
-                    // The callback is called for each token generation step.
-                    callback = step =>
+                    var options = new TranslationOptions
                     {
-                        if (cancellationToken.IsCancellationRequested)
-                            return true; // Stop translation early
-                        return false; // Continue translation
-                    }
-                };
+                        // The callback is called for each token generation step.
+                        callback = step =>
+                        {
+                            if (cancellationToken.IsCancellationRequested)
+                                return true; // Stop translation early
+                            return false; // Continue translation
+                        }
+                    };
 
-                var result = EnTargetTranslator.Translate(text, options);
-                cancellationToken.ThrowIfCancellationRequested();
-                return result;
-            }, cancellationToken);
+                    var result = EnTargetTranslator.Translate(text, options);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    return result;
+                }, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                return "@Canceled";
+            }
         }
     }
 }

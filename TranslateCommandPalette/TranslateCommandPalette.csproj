@@ -49,6 +49,15 @@
     <ProjectReference Include="..\CTranslate2Wrapper\CTranslate2Wrapper.vcxproj" />
   </ItemGroup>
 
+  <!-- Include model files in output and package -->
+  <ItemGroup>
+    <Content Include="Models\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <PackagePath>Models\%(RecursiveDir)%(Filename)%(Extension)</PackagePath>
+    </Content>
+  </ItemGroup>
+
   <!-- Add CTranslate2 native dependencies -->
   <ItemGroup>
     <Content Include="..\Dependencies\ctranslate2\bin\**\*.dll" CopyToOutputDirectory="PreserveNewest" Pack="true" />
@@ -76,7 +85,7 @@
     <!-- Suppress DynamicallyAccessedMemberTypes.PublicParameterlessConstructor in fallback code path of Windows SDK projection -->
     <WarningsNotAsErrors>IL2081</WarningsNotAsErrors>
 
-    <PublishTrimmed>true</PublishTrimmed>
-    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishSingleFile>false</PublishSingleFile>
   </PropertyGroup>
 </Project>

@@ -93,8 +93,9 @@ FE_INEXACT=0x20</PreprocessorDefinitions>
       </ForcedIncludeFiles>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>ctranslate2.lib</AdditionalDependencies>
+      <AdditionalDependencies>msvcrt.lib;ctranslate2.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)\Dependencies\ctranslate2\lib</AdditionalLibraryDirectories>
+      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
