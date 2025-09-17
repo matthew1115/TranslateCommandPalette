@@ -16,7 +16,6 @@ public partial class TranslateCommandPaletteCommandsProvider : CommandProvider
         Icon = IconHelpers.FromRelativePath("Assets\\StoreLogo.png");
         _commands = [
             new CommandItem(new TranslateCommandPaletteTranslatePage()) { Title = "Translate" },
-            new CommandItem(new TranslateCommandPaletteDictionaryPage()) { Title = "Dictionary" }
         ];
     }
 

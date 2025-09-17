@@ -16,37 +16,38 @@ namespace TranslateCommandPalette.Helpers
 {
     public class Translate
     {
+        private Translator mulEnTranslator;
+        private Translator EnTargetTranslator;
         /// <summary>
         /// Initializes a new instance of the <see cref="Translate"/> class.
         /// Creates an HttpClient instance that will be used for API requests.
         /// </summary>
-        public Translate()
+        public Translate(string mulEnPath, string EnZhPath)
         {
-            
+            mulEnTranslator = new(mulEnPath);
+            EnTargetTranslator = new(EnZhPath);
         }
 
-        /// <summary>
-        /// Retrieves the Mandarin translation for an English word from Wiktionary.
-        /// </summary>
-        /// <param name="word">The English word to translate.</param>
-        /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
-        /// <returns>
-        /// A task that represents the asynchronous operation. The task result contains:
-        /// - The Mandarin translation if found.
-        /// - Error message if no translation is found.
-        /// - Error message if an exception occurs during the request or parsing.
-        /// </returns>
-        /// <example>
-        /// Usage example:
-        /// <code>
-        /// var translator = new GetTranslate();
-        /// string translation = await translator.GetMandarinTranslation("hello");
-        /// Console.WriteLine(translation); // Outputs the Mandarin translation for "hello"
-        /// </code>
-        /// </example>
-        public async Task<string> GetMandarinTranslation(string word, CancellationToken cancellationToken = default)
+        // TODO: Add language detection and support multilang
+        public async Task<string> GetTargetTranslation(string text, CancellationToken cancellationToken = default)
         {
-            
+            return await Task.Run(() =>
+            {
+                var options = new TranslationOptions
+                {
+                    // The callback is called for each token generation step.
+                    callback = step =>
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                            return true; // Stop translation early
+                        return false; // Continue translation
+                    }
+                };
+
+                var result = EnTargetTranslator.Translate(text, options);
+                cancellationToken.ThrowIfCancellationRequested();
+                return result;
+            }, cancellationToken);
         }
     }
 }

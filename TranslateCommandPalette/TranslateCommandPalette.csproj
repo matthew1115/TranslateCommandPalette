@@ -49,6 +49,17 @@
     <ProjectReference Include="..\CTranslate2Wrapper\CTranslate2Wrapper.vcxproj" />
   </ItemGroup>
 
+  <!-- Add CTranslate2 native dependencies -->
+  <ItemGroup>
+    <Content Include="..\Dependencies\ctranslate2\bin\**\*.dll" CopyToOutputDirectory="PreserveNewest" Pack="true" />
+    <Content Include="..\Dependencies\ctranslate2\lib\**\*.dll" CopyToOutputDirectory="PreserveNewest" Pack="true" />
+  </ItemGroup>
+
+  <!-- Ensure C++/CLI wrapper and its dependencies are included -->
+  <ItemGroup>
+    <Content Include="$(OutDir)CTranslate2Wrapper.dll" CopyToOutputDirectory="PreserveNewest" Pack="true" Condition="Exists('$(OutDir)CTranslate2Wrapper.dll')" />
+  </ItemGroup>
+
   <!--
     Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
     Explorer "Package and Publish" context menu entry to be enabled for this project even if

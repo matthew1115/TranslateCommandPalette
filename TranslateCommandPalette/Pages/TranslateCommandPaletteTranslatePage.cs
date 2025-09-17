@@ -16,7 +16,7 @@ internal sealed partial class TranslateCommandPaletteTranslatePage : DynamicList
 {
     private readonly List<IListItem> _results = [];
     private readonly ListItem _EmptyItem;
-    private readonly Translate translator = new();
+    private readonly Translate translator = new("Models\\opus_mul_en_ct2_int8", "Models\\opus_en_zh_ct2_int8");
     private CancellationTokenSource _cts = new();
 
     public TranslateCommandPaletteTranslatePage()
@@ -45,11 +45,11 @@ internal sealed partial class TranslateCommandPaletteTranslatePage : DynamicList
         }
         else
         {
-            var mandarin = translator.GetMandarinTranslation(newSearch, _cts.Token).Result;
-            if (mandarin != "@Canceled")
+            var TranslatedText = translator.GetTargetTranslation(newSearch, _cts.Token).Result;
+            if (TranslatedText != "@Canceled")
             {
                 updateFlag = true;
-                _results.Add(new ListItem(new OpenUrl($"https://dict.youdao.com/result?word={newSearch}&lang=en")) { Title = mandarin });
+                _results.Add(new ListItem(new OpenUrl($"https://dict.youdao.com/result?word={newSearch}&lang=en")) { Title = TranslatedText });
             }
         }
         if (updateFlag)
