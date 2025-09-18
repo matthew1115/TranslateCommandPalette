@@ -10,9 +10,6 @@
 #include <ctranslate2/translator.h>
 #include <msclr/marshal_cppstd.h>
 
-// Forward declaration for the callback wrapper
-class CallbackWrapper;
-
 // This is the Private Implementation (PImpl) idiom.
 // It hides the native C++ types from the header file, which improves compile times
 // and prevents issues with including native headers in C# projects.
@@ -20,40 +17,7 @@ class CTranslate2WrapperImpl {
 public:
     // This holds the pointer to the actual CTranslate2 engine.
     std::unique_ptr<ctranslate2::Translator> translator;
-    // Store the callback wrapper to keep it alive during translation
-    std::unique_ptr<CallbackWrapper> callbackWrapper;
 };
-
-// Native C++ class to wrap the managed callback
-class CallbackWrapper {
-private:
-    gcroot<CTranslate2Wrapper::TranslationCallback^> managedCallback;
-
-public:
-    CallbackWrapper(CTranslate2Wrapper::TranslationCallback^ callback) 
-        : managedCallback(callback) {}
-
-    bool callCallback(const ctranslate2::GenerationStepResult& step) {
-        // Check if the managed callback is valid
-        CTranslate2Wrapper::TranslationCallback^ callback = managedCallback;
-        if (callback != nullptr) {
-            return callback(static_cast<int>(step.step));
-        }
-        return false;
-    }
-
-    // Static function that can be used with std::function
-    static CallbackWrapper* currentWrapper;
-    static bool staticCallback(const ctranslate2::GenerationStepResult& step) {
-        if (currentWrapper != nullptr) {
-            return currentWrapper->callCallback(step);
-        }
-        return false;
-    }
-};
-
-// Static member definition
-CallbackWrapper* CallbackWrapper::currentWrapper = nullptr;
 
 // Use the namespace defined in your header file
 using namespace CTranslate2Wrapper;
@@ -63,31 +27,24 @@ Translator::Translator(String^ modelPath) {
     m_pImpl = new CTranslate2WrapperImpl();
     try
     {
-        // Convert managed string to native and construct translator
+        // Convert the managed .NET string to a native C++ std::string.
         std::string nativeModelPath = msclr::interop::marshal_as<std::string>(modelPath);
+
+        // Create the native CTranslate2 Translator object.
         m_pImpl->translator = std::make_unique<ctranslate2::Translator>(nativeModelPath, ctranslate2::Device::CPU);
     }
     catch (const std::exception& e)
     {
-        // Emit to OutputDebugString so the message appears in DebugView / VS Output (Debug -> Windows -> Output)
-        std::string msg = "CTranslate2Wrapper ctor failed: ";
-        msg += e.what();
-        msg += "\n";
-        OutputDebugStringA(msg.c_str());
-
+        // If the native code throws an exception (e.g., model not found),
+        // clean up and re-throw it as a managed exception that C# can catch.
         delete m_pImpl;
         m_pImpl = nullptr;
         throw gcnew Exception(msclr::interop::marshal_as<String^>(e.what()));
     }
 }
 
-// Original Translate Method: This maintains backward compatibility.
+// Translate Method: This is the core function your C# app will call.
 String^ Translator::Translate(String^ text) {
-    return Translate(text, nullptr);
-}
-
-// Translate Method with Options: This supports cancellation via callback.
-String^ Translator::Translate(String^ text, TranslationOptions^ options) {
     if (m_pImpl == nullptr)
     {
         throw gcnew ObjectDisposedException("Translator instance has been disposed.");
@@ -113,33 +70,15 @@ String^ Translator::Translate(String^ text, TranslationOptions^ options) {
     //    We wrap our single sentence's tokens in another vector to create a batch of one.
     std::vector<std::vector<std::string>> batch_tokens = { tokens };
 
-    // 4. Set up translation options with callback support
-    ctranslate2::TranslationOptions native_options;
-    
-    // If options are provided and callback is set, wrap the managed callback
-    if (options != nullptr && options->callback != nullptr) {
-        // Create a native callback wrapper that can be used with CTranslate2
-        m_pImpl->callbackWrapper = std::unique_ptr<CallbackWrapper>(new CallbackWrapper(options->callback));
-        
-        // Set the static pointer and assign the callback
-        CallbackWrapper::currentWrapper = m_pImpl->callbackWrapper.get();
-        native_options.callback = CallbackWrapper::staticCallback;
-    }
-
-    // 5. Call the CTranslate2 engine with options
-    const std::vector<ctranslate2::TranslationResult> results = 
-        m_pImpl->translator->translate_batch(batch_tokens, native_options);
-
-    // Clean up the callback wrapper after translation
-    CallbackWrapper::currentWrapper = nullptr;
-    m_pImpl->callbackWrapper.reset();
+    // 4. Call the CTranslate2 engine.
+    const std::vector<ctranslate2::TranslationResult> results = m_pImpl->translator->translate_batch(batch_tokens);
 
     if (results.empty())
     {
         return String::Empty;
     }
 
-    // 6. Manually join the output tokens into a single string.
+    // 5. FIX: Manually join the output tokens into a single string.
     const std::vector<std::string>& output_tokens = results[0].output();
     std::string translatedText;
     for (size_t i = 0; i < output_tokens.size(); ++i) {
@@ -150,7 +89,7 @@ String^ Translator::Translate(String^ text, TranslationOptions^ options) {
         }
     }
 
-    // 7. Marshal the native C++ string result back to a .NET string and return it.
+    // 6. Marshal the native C++ string result back to a .NET string and return it.
     return msclr::interop::marshal_as<String^>(translatedText);
 }
 

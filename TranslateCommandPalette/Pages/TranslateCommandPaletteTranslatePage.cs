@@ -74,6 +74,7 @@ internal sealed partial class TranslateCommandPaletteTranslatePage : DynamicList
 
         if (oldSearch == newSearch)
         {
+            Thread.Sleep(50); // Debounce rapid identical inputs
             return;
         }
         IsLoading = true;
@@ -82,7 +83,7 @@ internal sealed partial class TranslateCommandPaletteTranslatePage : DynamicList
         _results.Clear();
         if (string.IsNullOrEmpty(newSearch))
         {
-            _results.Add(_EmptyItem);
+            //_results.Add(_EmptyItem);
         }
         else if (translate is null)
         {

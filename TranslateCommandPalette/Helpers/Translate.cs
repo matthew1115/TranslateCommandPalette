@@ -1,9 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
@@ -84,18 +82,7 @@ namespace TranslateCommandPalette.Helpers
             {
                 return await Task.Run(() =>
                 {
-                    var options = new TranslationOptions
-                    {
-                        // The callback is called for each token generation step.
-                        callback = step =>
-                        {
-                            if (cancellationToken.IsCancellationRequested)
-                                return true; // Stop translation early
-                            return false; // Continue translation
-                        }
-                    };
-
-                    var result = EnTargetTranslator.Translate(text, options);
+                    var result = EnTargetTranslator.Translate(text);
                     cancellationToken.ThrowIfCancellationRequested();
                     return result;
                 }, cancellationToken);

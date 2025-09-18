@@ -24,7 +24,6 @@ namespace CTranslate2Wrapper {
         !Translator(); // Finalizer
 
         String^ Translate(String^ text);
-        String^ Translate(String^ text, TranslationOptions^ options);
 
     private:
         CTranslate2WrapperImpl* m_pImpl;
