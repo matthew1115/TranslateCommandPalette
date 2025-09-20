@@ -1,0 +1,55 @@
+Package: vcpkg-cmake
+Version: 2024-04-23
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 5f39023099af870cf27407c358dfa5ecc4ced7772d040dc9ea9d0bd16adbeee4
+Status: install ok installed
+
+Package: vcpkg-cmake-config
+Version: 2024-05-23
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 432231e4e646f7d8827e085d96e3c3029e9db46c3aa51d6ce4b5045b210044e2
+Status: install ok installed
+
+Package: abseil
+Version: 20250127.1
+Port-Version: 4
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 4928dc43dae42374dbd8302d761330bb79edec8aac1e3627b44db5959cf3ea07
+Description: Abseil is an open-source collection of C++ library code designed to augment the C++ standard library. The Abseil library code is collected from Google's own C++ code base, has been extensively tested and used in production, and is the same code we depend on in our daily coding lives.
+    In some cases, Abseil provides pieces missing from the C++ standard; in others, Abseil provides alternatives to the standard for special needs we've found through usage in the Google code base. We denote those cases clearly within the library code we provide you.
+    Abseil is not meant to be a competitor to the standard library; we've just found that many of these utilities serve a purpose within our code base, and we now want to provide those resources to the C++ community as a whole.
+Status: install ok installed
+
+Package: utf8-range
+Version: 5.29.5
+Depends: abseil, vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 5d82d872a64340ba06548308c0fabdcde45360d3bcd33bd5b2c208298ac4e996
+Description: Fast UTF-8 validation with Range algorithm (NEON+SSE4+AVX2)
+Status: install ok installed
+
+Package: protobuf
+Version: 5.29.5
+Port-Version: 1
+Depends: abseil, protobuf, utf8-range, vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 29373b5786b54ddcee8121ab64ad7622ee2d972ca46996d502ef112892c3908a
+Description: Google's language-neutral, platform-neutral, extensible mechanism for serializing structured data.
+Status: install ok installed
+
+Package: sentencepiece
+Version: 0.2.0
+Port-Version: 2
+Depends: abseil, protobuf, vcpkg-cmake
+Architecture: x64-windows
+Multi-Arch: same
+Abi: d6e723d8ee2800979691ffb4086f937f0428e8f8191162bde2f3d4d1391c906a
+Description: SentencePiece is an unsupervised text tokenizer and detokenizer mainly for Neural Network-based text generation systems where the vocabulary size is predetermined prior to the neural model training
+Status: install ok installed
+

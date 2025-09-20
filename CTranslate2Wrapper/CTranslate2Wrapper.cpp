@@ -6,9 +6,13 @@
 #include <vector>
 #include <string>
 
+#include <sentencepiece_processor.h>
+
 // CTranslate2 and C++/CLI interop headers
 #include <ctranslate2/translator.h>
 #include <msclr/marshal_cppstd.h>
+
+#include <Windows.h>
 
 // This is the Private Implementation (PImpl) idiom.
 // It hides the native C++ types from the header file, which improves compile times
