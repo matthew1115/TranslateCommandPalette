@@ -102,6 +102,7 @@ FE_INEXACT=0x20</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <ForcedIncludeFiles>
       </ForcedIncludeFiles>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>msvcrt.lib;sentencepiece.lib;ctranslate2.lib</AdditionalDependencies>
@@ -147,6 +148,7 @@ FE_INEXACT=0x20</PreprocessorDefinitions>
       <ForcedIncludeFiles>
       </ForcedIncludeFiles>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>msvcrt.lib;sentencepiece.lib;ctranslate2.lib</AdditionalDependencies>

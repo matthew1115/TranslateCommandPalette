@@ -8,14 +8,6 @@ namespace CTranslate2Wrapper {
     // Delegate for the translation callback function
     public delegate bool TranslationCallback(int step);
 
-    // Managed wrapper for translation options
-    public ref class TranslationOptions {
-    public:
-        TranslationCallback^ callback;
-        
-        TranslationOptions() : callback(nullptr) {}
-    };
-
     public ref class Translator : IDisposable
     {
     public:
