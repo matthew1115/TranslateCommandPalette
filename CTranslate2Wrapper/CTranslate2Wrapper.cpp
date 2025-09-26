@@ -9,9 +9,27 @@
 // CTranslate2, sentencepiece and C++/CLI interop headers
 #include <ctranslate2/translator.h>
 #include <sentencepiece_processor.h>
-#include <msclr/marshal_cppstd.h>
 
-#include <windows.h>
+// Add these includes for UTF-8/UTF-16 conversion
+#include <msclr/marshal.h>
+#include <msclr/marshal_cppstd.h>
+#include <codecvt>
+
+// Convert System::String^ (UTF-16) → std::string (UTF-8)
+std::string toUtf8(System::String^ s) {
+    using convert_t = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>;
+    convert_t converter;
+    std::wstring wstr = msclr::interop::marshal_as<std::wstring>(s);
+    return converter.to_bytes(wstr);
+}
+
+// Convert std::string (UTF-8) → System::String^ (UTF-16)
+System::String^ fromUtf8(const std::string& s) {
+    using convert_t = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>;
+    convert_t converter;
+    std::wstring wstr = converter.from_bytes(s);
+    return gcnew System::String(wstr.c_str());
+}
 
 // This is the Private Implementation (PImpl) idiom.
 // It hides the native C++ types from the header file, which improves compile times
@@ -74,7 +92,7 @@ String^ Translator::Translate(String^ text) {
 	}
 
 	// 1. Marshal (convert) the input .NET string to a native C++ string.
-	std::string nativeText = msclr::interop::marshal_as<std::string>(text);
+	std::string nativeText = toUtf8(text);
 
 	// 2. Tokenize the input string. Use sentencepiece
 	std::vector<std::string> tokens;
@@ -96,19 +114,17 @@ String^ Translator::Translate(String^ text) {
 		return String::Empty;
 	}
 
-	// 5. FIX: Manually join the output tokens into a single string.
+
 	const std::vector<std::string>& output_tokens = results[0].output();
 	std::string translatedText;
-	for (size_t i = 0; i < output_tokens.size(); ++i) {
-		translatedText += output_tokens[i];
-		// Add a space between tokens, but not after the last one.
-		if (i < output_tokens.size() - 1) {
-			translatedText += " ";
-		}
+	auto status = tokenizer.Decode(output_tokens, &translatedText);
+	if (!status.ok()) {
+		throw gcnew Exception(msclr::interop::marshal_as<String^>(
+			"Failed to decode SentencePiece tokens: " + status.ToString()));
 	}
 
 	// 6. Marshal the native C++ string result back to a .NET string and return it.
-	return msclr::interop::marshal_as<String^>(translatedText);
+	return fromUtf8(translatedText);
 }
 
 // This is the IDisposable pattern for C++/CLI.
