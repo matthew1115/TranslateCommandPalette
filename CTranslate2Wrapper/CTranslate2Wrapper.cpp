@@ -15,26 +15,31 @@
 #include <msclr/marshal_cppstd.h>
 #include <codecvt>
 
-// Convert System::String^ (UTF-16) → std::string (UTF-8)
 std::string toUtf8(System::String^ s) {
-    using convert_t = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>;
-    convert_t converter;
-    std::wstring wstr = msclr::interop::marshal_as<std::wstring>(s);
-    return converter.to_bytes(wstr);
+	using namespace System::Runtime::InteropServices;
+	IntPtr ptr = Marshal::StringToHGlobalUni(s);
+	const wchar_t* wstr = static_cast<const wchar_t*>(ptr.ToPointer());
+
+	int len = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, nullptr, 0, nullptr, nullptr);
+	std::string utf8(len - 1, 0);
+	WideCharToMultiByte(CP_UTF8, 0, wstr, -1, utf8.data(), len, nullptr, nullptr);
+
+	Marshal::FreeHGlobal(ptr);
+	return utf8;
 }
 
-// Convert std::string (UTF-8) → System::String^ (UTF-16)
 System::String^ fromUtf8(const std::string& s) {
-    using convert_t = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>;
-    convert_t converter;
-    std::wstring wstr = converter.from_bytes(s);
-    return gcnew System::String(wstr.c_str());
+	int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, nullptr, 0);
+	std::wstring wstr(len - 1, 0);
+	MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, wstr.data(), len);
+	return gcnew System::String(wstr.c_str());
 }
 
 // This is the Private Implementation (PImpl) idiom.
 // It hides the native C++ types from the header file, which improves compile times
 // and prevents issues with including native headers in C# projects.
-class CTranslate2WrapperImpl {
+class CTranslate2WrapperImpl
+{
 public:
 	std::unique_ptr<std::string> nativeModelPath;
 	// This holds the pointer to the actual CTranslate2 engine.
@@ -45,17 +50,17 @@ public:
 using namespace CTranslate2Wrapper;
 
 // Constructor: Initializes the native translator engine.
-Translator::Translator(String^ modelPath) {
+Translator::Translator(String^ modelPath)
+{
 	m_pImpl = new CTranslate2WrapperImpl();
 	try
 	{
 		// Convert the managed .NET string to a native C++ std::string.
-		m_pImpl->nativeModelPath = std::make_unique<std::string>(msclr::interop::marshal_as<std::string>(modelPath));
+		m_pImpl->nativeModelPath = std::make_unique<std::string>(toUtf8(modelPath));
 
 		// Create the native CTranslate2 Translator object.
 		const std::vector<int> device_indices = { 0 };
 		m_pImpl->translator = std::make_unique<ctranslate2::Translator>(*(m_pImpl->nativeModelPath), ctranslate2::Device::CPU, ctranslate2::ComputeType::INT8, device_indices);
-
 	}
 	catch (const std::exception& e)
 	{
@@ -68,7 +73,8 @@ Translator::Translator(String^ modelPath) {
 }
 
 // Translate Method: This is the core function your C# app will call.
-String^ Translator::Translate(String^ text) {
+String^ Translator::Translate(String^ text)
+{
 	if (m_pImpl == nullptr)
 	{
 		throw gcnew ObjectDisposedException("Translator instance has been disposed.");
@@ -76,19 +82,13 @@ String^ Translator::Translate(String^ text) {
 
 	// Load the SentencePiece spm file.
 	sentencepiece::SentencePieceProcessor tokenizer;
-	// std::string sp_model_path = *(m_pImpl->nativeModelPath) + "/source.spm";
-	std::string sp_model_path = "D:/coding/TranslateCommandPalette/TranslateCommandPalette/Models/opus_en_zh_ct2_int8/source.spm";
+	std::string sp_model_path = *(m_pImpl->nativeModelPath) + "/source.spm";
 	std::string debugMsg = "Trying to load SentencePiece model from: " + sp_model_path + "\n";
 	OutputDebugStringA(debugMsg.c_str());
-	try {
-		const auto sp_status = tokenizer.Load(sp_model_path);
-		if (!sp_status.ok()) {
-			throw std::runtime_error("Failed to load SentencePiece model: " + sp_status.ToString());
-		}
-	}
-	catch (const std::exception& e) {
-		OutputDebugStringA("Exception caught while loading SentencePiece model.\n");
-		throw gcnew Exception(msclr::interop::marshal_as<String^>(e.what()));
+	const auto sp_status = tokenizer.Load(sp_model_path);
+	if (!sp_status.ok())
+	{
+		throw std::runtime_error("Failed to load SentencePiece model: " + sp_status.ToString());
 	}
 
 	// 1. Marshal (convert) the input .NET string to a native C++ string.
@@ -101,24 +101,38 @@ String^ Translator::Translate(String^ text) {
 	tokens.insert(tokens.begin(), "<s>");
 	tokens.push_back("</s>");
 
-
 	// 3. The translate_batch method expects a vector of sentences.
 	//    We wrap our single sentence's tokens in another vector to create a batch of one.
 	std::vector<std::vector<std::string>> batch_tokens = { tokens };
 
-	// 4. Call the CTranslate2 engine.
-	const std::vector<ctranslate2::TranslationResult> results = m_pImpl->translator->translate_batch(batch_tokens);
+	// Translation options
+	ctranslate2::TranslationOptions options;
+	options.beam_size = 2;
+	options.num_hypotheses = 1;
+	options.max_decoding_length = 256;
+	options.return_scores = false;
+	// additional options
+	options.repetition_penalty = 1.1;
 
-	if (results.empty())
+	// 4. Call the CTranslate2 engine.
+	const std::vector<ctranslate2::TranslationResult> results = m_pImpl->translator->translate_batch(batch_tokens, options);
+
+	if (results.empty() || results[0].hypotheses.empty())
 	{
 		return String::Empty;
 	}
 
+	// Remove BOS/EOS tokens
+	auto hypothesis = results[0].hypotheses[0];
+	if (!hypothesis.empty() && hypothesis.front() == "<s>")
+		hypothesis.erase(hypothesis.begin());
+	if (!hypothesis.empty() && hypothesis.back() == "</s>")
+		hypothesis.pop_back();
 
-	const std::vector<std::string>& output_tokens = results[0].output();
 	std::string translatedText;
-	auto status = tokenizer.Decode(output_tokens, &translatedText);
-	if (!status.ok()) {
+	auto status = tokenizer.Decode(hypothesis, &translatedText);
+	if (!status.ok())
+	{
 		throw gcnew Exception(msclr::interop::marshal_as<String^>(
 			"Failed to decode SentencePiece tokens: " + status.ToString()));
 	}
@@ -129,13 +143,16 @@ String^ Translator::Translate(String^ text) {
 
 // This is the IDisposable pattern for C++/CLI.
 // The destructor (~), called by C#'s 'using' block, chains to the finalizer (!).
-Translator::~Translator() {
+Translator::~Translator()
+{
 	this->!Translator();
 }
 
 // The finalizer is the last line of defense to clean up unmanaged resources.
-Translator::!Translator() {
-	if (m_pImpl != nullptr) {
+Translator::!Translator()
+{
+	if (m_pImpl != nullptr)
+	{
 		delete m_pImpl;
 		m_pImpl = nullptr;
 	}
