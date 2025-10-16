@@ -98,7 +98,8 @@ String^ Translator::Translate(String^ text)
 	std::vector<std::string> tokens;
 	tokenizer.Encode(nativeText, &tokens);
 	// Add BOS and EOS tokens
-	tokens.insert(tokens.begin(), "<s>");
+	//tokens.insert(tokens.begin(), "<s>");
+	// opusmt does not need BOS tokens
 	tokens.push_back("</s>");
 
 	// 3. The translate_batch method expects a vector of sentences.

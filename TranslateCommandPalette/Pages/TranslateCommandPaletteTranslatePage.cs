@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using TranslateCommandPalette.Helpers;
+using Windows.ApplicationModel.Appointments;
 
 namespace TranslateCommandPalette;
 
@@ -71,10 +72,13 @@ internal sealed partial class TranslateCommandPaletteTranslatePage : DynamicList
     public override void UpdateSearchText(string oldSearch, string newSearch)
     {
         bool updateFlag = false;
-
+        if (newSearch.Length < 3)
+        {
+            return;
+        }
         if (oldSearch == newSearch)
         {
-            Thread.Sleep(50); // Debounce rapid identical inputs
+            Thread.Sleep(250); // Debounce rapid identical inputs
             return;
         }
         IsLoading = true;
