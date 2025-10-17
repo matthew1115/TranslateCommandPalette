@@ -64,6 +64,26 @@
     <Content Include="..\Dependencies\ctranslate2\lib\**\*.dll" CopyToOutputDirectory="PreserveNewest" Pack="true" />
     <Content Include="..\CTranslate2Wrapper\vcpkg_installed\x64-windows\x64-windows\bin\*.dll" CopyToOutputDirectory="PreserveNewest" Pack="true" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Remove="Assets\Square44x44Logo.altform-lightunplated_targetsize-16.png" />
+    <Content Remove="Assets\Square44x44Logo.altform-lightunplated_targetsize-24.png" />
+    <Content Remove="Assets\Square44x44Logo.altform-lightunplated_targetsize-256.png" />
+    <Content Remove="Assets\Square44x44Logo.altform-lightunplated_targetsize-32.png" />
+    <Content Remove="Assets\Square44x44Logo.altform-lightunplated_targetsize-48.png" />
+    <Content Remove="Assets\Square44x44Logo.altform-unplated_targetsize-16.png" />
+    <Content Remove="Assets\Square44x44Logo.altform-unplated_targetsize-256.png" />
+    <Content Remove="Assets\Square44x44Logo.altform-unplated_targetsize-32.png" />
+    <Content Remove="Assets\Square44x44Logo.altform-unplated_targetsize-48.png" />
+    <Content Remove="Assets\Square44x44Logo.scale-100.png" />
+    <Content Remove="Assets\Square44x44Logo.scale-125.png" />
+    <Content Remove="Assets\Square44x44Logo.scale-150.png" />
+    <Content Remove="Assets\Square44x44Logo.scale-400.png" />
+    <Content Remove="Assets\Square44x44Logo.targetsize-16.png" />
+    <Content Remove="Assets\Square44x44Logo.targetsize-24.png" />
+    <Content Remove="Assets\Square44x44Logo.targetsize-256.png" />
+    <Content Remove="Assets\Square44x44Logo.targetsize-32.png" />
+    <Content Remove="Assets\Square44x44Logo.targetsize-48.png" />
+  </ItemGroup>
 
   <!-- Ensure C++/CLI wrapper and its dependencies are included -->
   <ItemGroup>
@@ -88,5 +108,7 @@
 
     <PublishTrimmed>false</PublishTrimmed>
     <PublishSingleFile>false</PublishSingleFile>
+    <PackageCertificateThumbprint>D38CD70FB9731DEA2CEFDE74EBAD2D9BF4F5EB36</PackageCertificateThumbprint>
+    <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
   </PropertyGroup>
 </Project>

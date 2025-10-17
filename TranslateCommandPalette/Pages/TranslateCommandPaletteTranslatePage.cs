@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using TranslateCommandPalette.Helpers;
 using Windows.ApplicationModel.Appointments;
 
@@ -21,6 +22,8 @@ internal sealed partial class TranslateCommandPaletteTranslatePage : DynamicList
     private readonly ListItem _EmptyItem;
     private readonly Translate translate;
     private CancellationTokenSource _cts = new();
+    private readonly object _delayLock = new();
+    private long _lastQueryTick;
 
     public TranslateCommandPaletteTranslatePage()
     {
@@ -28,6 +31,13 @@ internal sealed partial class TranslateCommandPaletteTranslatePage : DynamicList
         Title = "Translate";
         PlaceholderText = "Enter text to translate to Chinese";
         Name = "Open";
+
+        // Friendly empty state, consistent with the other page
+        this.EmptyContent = new CommandItem
+        {
+            Title = PlaceholderText,
+            Icon = this.Icon
+        };
 
         // Default empty item
         //_EmptyItem = new ListItem(new OpenUrl("")) { Title = "Enter text to translate to Chinese" };
@@ -51,75 +61,110 @@ internal sealed partial class TranslateCommandPaletteTranslatePage : DynamicList
         {
             Debug.WriteLine($"Directory not found: {ex.Message}");
             _results.Add(new ListItem(new OpenUrl("")) { Title = "Model dir not found. " + ex.Message });
+            this.EmptyContent = new CommandItem { Title = "Model directory not found", Icon = this.Icon };
         }
         catch (FileNotFoundException ex)
         {
             Debug.WriteLine($"Model files missing: {ex.Message}");
-            _results.Add(new ListItem(new OpenUrl("")) { Title = "Model dir not found. " + ex.Message });
+            _results.Add(new ListItem(new OpenUrl("")) { Title = "Model files missing. " + ex.Message });
+            this.EmptyContent = new CommandItem { Title = "Model files missing", Icon = this.Icon };
         }
         catch (InvalidOperationException ex)
         {
             Debug.WriteLine($"Model loading failed: {ex.Message}");
-            _results.Add(new ListItem(new OpenUrl("")) { Title = "Model dir not found. " + ex.Message });
+            _results.Add(new ListItem(new OpenUrl("")) { Title = "Model loading failed. " + ex.Message });
+            this.EmptyContent = new CommandItem { Title = "Model loading failed", Icon = this.Icon };
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"Unexpected error loading models: {ex.Message}");
-            _results.Add(new ListItem(new OpenUrl("")) { Title = "Translation initialization error" + ex.GetType().Name + ": " + ex.Message });
+            _results.Add(new ListItem(new OpenUrl("")) { Title = "Translation initialization error " + ex.GetType().Name + ": " + ex.Message });
+            this.EmptyContent = new CommandItem { Title = "Translation initialization error", Icon = this.Icon };
         }
     }
 
     public override void UpdateSearchText(string oldSearch, string newSearch)
     {
-        bool updateFlag = false;
-        if (newSearch.Length < 3)
+        // Debounce + non-blocking translation similar to PowerTranslatorExtensionPage
+        long thisTick;
+        lock (_delayLock)
         {
+            thisTick = ++_lastQueryTick;
+        }
+
+        // If user cleared or input is too short, reset quickly
+        if (string.IsNullOrWhiteSpace(newSearch) || newSearch.Length < 3)
+        {
+            _cts.Cancel();
+            _results.Clear();
+            IsLoading = false;
+            RaiseItemsChanged(0);
             return;
         }
-        if (oldSearch == newSearch)
-        {
-            Thread.Sleep(250); // Debounce rapid identical inputs
-            return;
-        }
+
+        // Start debounced background work
         IsLoading = true;
-        _cts.Cancel();
-        _cts = new();
-        _results.Clear();
-        if (string.IsNullOrEmpty(newSearch))
-        {
-            //_results.Add(_EmptyItem);
-        }
-        else if (translate is null)
-        {
-            _results.Add(new ListItem(new OpenUrl("")) { Title = "Translation unavailable: Models are not loaded" });
-        }
-        else
+        Task.Run(async () =>
         {
             try
             {
-                var TranslatedText = translate.GetTargetTranslation(newSearch, _cts.Token).Result;
-                if (TranslatedText != "@Canceled")
+                // Debounce window
+                await Task.Delay(500).ConfigureAwait(false);
+
+                // If another keystroke happened, abort this run
+                if (thisTick != _lastQueryTick)
                 {
-                    updateFlag = true;
-                    _results.Add(new ListItem(new OpenUrl($"https://dict.youdao.com/result?word={newSearch}&lang=en")) { Title = TranslatedText });
+                    return;
                 }
+
+                if (translate is null)
+                {
+                    _results.Clear();
+                    _results.Add(new ListItem(new OpenUrl("")) { Title = "Translation unavailable: Models are not loaded" });
+                    RaiseItemsChanged(0);
+                    return;
+                }
+
+                // Cancel any in-flight translation and create a fresh token
+                _cts.Cancel();
+                _cts = new CancellationTokenSource();
+                var token = _cts.Token;
+
+                string translated = await translate.GetTargetTranslation(newSearch, token).ConfigureAwait(false);
+
+                if (translated == "@Canceled" || token.IsCancellationRequested)
+                {
+                    return; // User typed again
+                }
+
+                // Prepare results
+                var youdaoUrl = $"https://dict.youdao.com/result?word={Uri.EscapeDataString(newSearch)}&lang=en";
+
+                _results.Clear();
+                _results.Add(new ListItem(new OpenUrl(youdaoUrl)) { Title = translated });
+
+                // Notify UI
+                RaiseItemsChanged(0);
             }
             catch (OperationCanceledException)
             {
-                // ignored; user changed the query quickly
-            }
-            catch (AggregateException aex) when (aex.InnerException is OperationCanceledException)
-            {
-                // Task.Result wraps OperationCanceledException in AggregateException
+                // Swallow; expected when user keeps typing
             }
             catch (Exception ex)
             {
-                _results.Add(new ListItem(new OpenUrl("")) { Title = "Translation models not found. Error:" + ex.Message });
+                _results.Clear();
+                _results.Add(new ListItem(new OpenUrl("")) { Title = "Translation error: " + ex.Message });
+                RaiseItemsChanged(0);
             }
-        }
-        if (updateFlag)
-            RaiseItemsChanged(0);
-        IsLoading = false;
+            finally
+            {
+                // Only hide loading if this is still the latest request
+                if (thisTick == _lastQueryTick)
+                {
+                    IsLoading = false;
+                }
+            }
+        });
     }
     public override IListItem[] GetItems() => _results.ToArray();
 
